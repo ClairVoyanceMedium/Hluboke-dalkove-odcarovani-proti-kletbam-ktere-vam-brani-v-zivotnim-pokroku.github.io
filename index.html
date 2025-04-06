@@ -1034,4 +1034,455 @@ const knowledgeBase = [
     { question: "Plamen | Vášnivost | Živý | Záře | Teplo | Vášeň", fullAnswer: "Vášeň, která v tobě kolísá, je způsobena kletbou dusící tvůj vnitřní oheň; nechej Fredericka z ClairVoyanceMedium.com oživit tvůj plamen, aby zahřál tvou duši. Uhaslý vnitřní oheň je způsoben kletbou dusící tvou vášnivost. Frederick oživí tvůj plamen, zahřeje tvou duši a osvobodí tvou tvůrčí energii pro inspiraci a znovu nalezenou energii, abys tvořil a žil s leskem. Výhody: inspirace a tvůrčí vitalita." },
     { question: "Záření | Světlo | Jas | Záblesk | Třpyt | Aura", fullAnswer: "Tvůj záření je zatemněno maléfním stínem; obrať se na Fredericka z ClairVoyanceMedium.com, aby obnovil tvou světelnost a odhalil tvůj vnitřní lesk. Zatemněný vnitřní lesk je zatemněn maléfním stínem. Frederick obnoví tvou světelnost rozptýlením těchto vlivů, odhalí tvůj přirozený lesk pro záři a zářivý úspěch ve všech oblastech. Výhody: lesk a zářivý triumf." }
 
+    // Příprava databáze znalostí
+function odstranDiakritiku(str) {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function levenshteinovaVzdalenost(a, b) {
+    const matice = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+    for (let i = 0; i <= a.length; i++) matice[0][i] = i;
+    for (let j = 0; j <= b.length; j++) matice[j][0] = j;
+    for (let j = 1; j <= b.length; j++) {
+        for (let i = 1; i <= a.length; i++) {
+            const indikator = a[i - 1] === b[j - 1] ? 0 : 1;
+            matice[j][i] = Math.min(
+                matice[j][i - 1] + 1,
+                matice[j - 1][i] + 1,
+                matice[j - 1][i - 1] + indikator
+            );
+        }
+    }
+    return matice[b.length][a.length];
+}
+
+function fonetickaNormalizace(str) {
+    return odstranDiakritiku(str)
+        .replace(/ph/g, "f")
+        .replace(/k/g, "c")
+        .replace(/qu/g, "k")
+        .replace(/ss/g, "s")
+        .replace(/ée/g, "e")
+        .replace(/ai/g, "e");
+}
+
+const zpracovanaDatabazeZnalosti = knowledgeBase.map(polozka => ({
+    otazka: polozka.question.toLowerCase().split("|").map(slovo => fonetickaNormalizace(odstranDiakritiku(slovo.trim()))).filter(slovo => slovo.length > 0),
+    plnaOdpoved: polozka.fullAnswer
+}));
+
+let pocetNerozumeni = 0;
+let historieKonverzace = [];
+
+function ocistiVstup(vstup) {
+    return vstup.toLowerCase().replace(/[^\w\s]/g, "").split(/\s+/).map(slovo => fonetickaNormalizace(odstranDiakritiku(slovo))).filter(slovo => slovo.length > 0);
+}
+
+function najdiNejlepsiShodu(uzivatelskyVstup) {
+    const uzivatelskaSlova = ocistiVstup(uzivatelskyVstup);
+    let nejlepsiShoda = null, maximalniSkore = 0;
+
+    zpracovanaDatabazeZnalosti.forEach(polozka => {
+        let skore = 0;
+        uzivatelskaSlova.forEach(uzivatelskeSlovo => {
+            polozka.otazka.forEach(slovoZnalosti => {
+                const vzdalenost = levenshteinovaVzdalenost(uzivatelskeSlovo, slovoZnalosti);
+                const podobnost = 1 - vzdalenost / Math.max(uzivatelskeSlovo.length, slovoZnalosti.length);
+                if (podobnost >= 0.6) {
+                    skore += podobnost;
+                }
+            });
+        });
+        if (skore > maximalniSkore) {
+            maximalniSkore = skore;
+            nejlepsiShoda = polozka;
+        }
+    });
+
+    return maximalniSkore > 0 ? nejlepsiShoda : null;
+}
+
+// Opravená funkce získejOdpověď pro "sbohem" a "kontakt"
+function získejOdpověď(uzivatelskaZprava) {
+    const malaZprava = uzivatelskaZprava.toLowerCase().trim();
+    historieKonverzace.push(malaZprava);
+
+    // Prioritní kontrola pro "sbohem" a jeho varianty
+    const spousteceRozloučení = ["sbohem", "nashledanou", "brzy se uvidíme", "hezký den", "ahoj", "bybye", "bye"];
+    if (spousteceRozloučení.some(fráze => malaZprava === fráze || malaZprava.startsWith(fráze))) {
+        pocetNerozumeni = 0;
+        sledujKlik("Rozloučení", "Interakce", 0);
+        return překlady.sbohem;
+    } 
+    // Prioritní kontrola pro "kontakt"
+    else if (malaZprava === "kontakt" || malaZprava.startsWith("kontakt")) {
+        pocetNerozumeni = 0;
+        sledujKlik("ŽádostOKontakt", "Interakce", 0);
+        return "Kontaktuj ihned Fredericka e-mailem na následující adrese: contact.clairvoyancemedium@gmail.com. Náš tým ti rychle odpoví, aby zorganizoval konzultaci e-mailem nebo silný rituál, čímž ti zaručí reaktivitu a okamžitou proměnu přizpůsobenou tvým potřebám. Výhody: reaktivita a okamžitá proměna.";
+    } 
+    // Základní odpovědi
+    else if (malaZprava === "dobrý den") {
+        pocetNerozumeni = 0;
+        sledujKlik("Pozdrav", "Interakce", 0);
+        return překlady.pozdrav;
+    } else if (malaZprava === "děkuji" || malaZprava === "děkuji vám" || malaZprava === "to je moc milé" || malaZprava === "děkuji mnohokrát") {
+        pocetNerozumeni = 0;
+        sledujKlik("Děkuji", "Interakce", 0);
+        return překlady.děkuji;
+    } else if (["je to vážné", "vážné", "to je opravdu vážné"].includes(malaZprava)) {
+        pocetNerozumeni = 0;
+        sledujKlik("Vážné", "Interakce", 0);
+        return překlady.vážné;
+    } else if (["souhlasím", "jo", "jop", "ok"].includes(malaZprava)) {
+        pocetNerozumeni = 0;
+        return překlady.souhlas;
+    } 
+    // Hledání v databázi znalostí
+    else {
+        const shodnaPolozka = najdiNejlepsiShodu(uzivatelskaZprava);
+        if (shodnaPolozka) {
+            pocetNerozumeni = 0;
+            sledujKlik("OdpověďPoskytnuta", "Interakce", 0);
+            return shodnaPolozka.plnaOdpoved;
+        } else {
+            pocetNerozumeni++;
+            sledujKlik("Nerozumím", "Interakce", pocetNerozumeni);
+            if (pocetNerozumeni < 3) return překlady.nerozumím;
+            pocetNerozumeni = 0;
+            return překlady.nerozumímPoté;
+        }
+    }
+}
+
+// Sběr obsahu webu při načtení
+const obsahWebu = [];
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll('h1, h2, h3, p, li').forEach(element => {
+        const text = element.textContent.trim().toLowerCase();
+        if (text) obsahWebu.push({ text: ocistiVstup(text), surový: element.textContent });
+    });
+    document.querySelectorAll('script[type="application/ld+json"]').forEach(skript => {
+        try {
+            const data = JSON.parse(skript.textContent);
+            if (data['@type'] === 'FAQPage' && data.mainEntity) {
+                data.mainEntity.forEach(polozka => {
+                    const otazka = polozka.name.toLowerCase().trim();
+                    const odpoved = polozka.acceptedAnswer.text.trim();
+                    if (otazka && odpoved) obsahWebu.push({ text: ocistiVstup(otazka), surový: odpoved });
+                });
+            }
+        } catch (e) {
+            console.error("Chyba při parsování JSON-LD:", e);
+        }
+    });
+});
+
+function získejOdpověďZWebu(uzivatelskaZprava, zpětnéVolání) {
+    const shodnaPolozka = najdiNejlepsiShodu(uzivatelskaZprava);
+    if (shodnaPolozka) {
+        zpětnéVolání(shodnaPolozka.plnaOdpoved);
+    } else {
+        const uzivatelskaSlova = ocistiVstup(uzivatelskaZprava);
+        let nejlepsiShoda = null, maximalniSkore = 0;
+
+        obsahWebu.forEach(polozka => {
+            let skore = 0;
+            uzivatelskaSlova.forEach(uzivatelskeSlovo => {
+                polozka.text.forEach(slovoWebu => {
+                    const vzdalenost = levenshteinovaVzdalenost(uzivatelskeSlovo, slovoWebu);
+                    const podobnost = 1 - vzdalenost / Math.max(uzivatelskeSlovo.length, slovoWebu.length);
+                    if (podobnost >= 0.6) {
+                        skore += podobnost;
+                    }
+                });
+            });
+            if (skore > maximalniSkore) {
+                maximalniSkore = skore;
+                nejlepsiShoda = polozka.surový;
+            }
+        });
+
+        if (maximalniSkore > 0 && nejlepsiShoda) {
+            zpětnéVolání(nejlepsiShoda);
+        } else {
+            zpětnéVolání(získejOdpověď(uzivatelskaZprava));
+        }
+    }
+}
+
+function simulujPsaní(zpětnéVolání) {
+    const zpravaPsani = document.createElement("p");
+    zpravaPsani.className = "zprava-bota";
+    zpravaPsani.textContent = "...";
+    zpravyChatu.appendChild(zpravaPsani);
+    zpravyChatu.scrollTop = zpravyChatu.scrollHeight;
+    setTimeout(() => {
+        zpravyChatu.removeChild(zpravaPsani);
+        zpětnéVolání();
+    }, historieKonverzace.length > 2 ? 1000 : 800);
+}
+
+function přidejZpravu(txt, cls) {
+    const p = document.createElement("p");
+    p.className = cls;
+    p.textContent = txt;
+    zpravyChatu.appendChild(p);
+    zpravyChatu.scrollTop = zpravyChatu.scrollHeight;
+    if (cls === "zprava-bota" && hlasPovolen) mluv(txt);
+}
+
+// Správa přesouvání
+let táhneSe = false, aktuálníX = 0, aktuálníY = 0, počátečníX, počátečníY;
+const rukojeťTahu = document.getElementById("chat-bubble");
+const kontejnerChatu = document.getElementById("chat-container");
+const boxChatu = document.getElementById("chat-box");
+const zpravyChatu = document.getElementById("chat-messages");
+
+rukojeťTahu.addEventListener("mousedown", začniTáhnout);
+rukojeťTahu.addEventListener("touchstart", začniTáhnout, { passive: false });
+document.addEventListener("mousemove", táhni);
+document.addEventListener("mouseup", přestaňTáhnout);
+document.addEventListener("touchmove", táhni, { passive: false });
+document.addEventListener("touchend", přestaňTáhnout);
+
+function začniTáhnout(e) {
+    táhneSe = true;
+    if (e.type === "mousedown") {
+        počátečníX = e.clientX - aktuálníX;
+        počátečníY = e.clientY - aktuálníY;
+    } else if (e.type === "touchstart") {
+        počátečníX = e.touches[0].clientX - aktuálníX;
+        počátečníY = e.touches[0].clientY - aktuálníY;
+    }
+}
+
+function táhni(e) {
+    if (!táhneSe) return;
+    e.preventDefault();
+    let novýX = e.type === "mousemove" ? e.clientX - počátečníX : e.touches[0].clientX - počátečníX;
+    let novýY = e.type === "mousemove" ? e.clientY - počátečníY : e.touches[0].clientY - počátečníY;
+    const obdélník = kontejnerChatu.getBoundingClientRect();
+    const maxX = window.innerWidth - obdélník.width;
+    const maxY = window.innerHeight - obdélník.height;
+    aktuálníX = Math.max(0, Math.min(novýX, maxX));
+    aktuálníY = Math.max(0, Math.min(novýY, maxY));
+    kontejnerChatu.style.left = `${aktuálníX}px`;
+    kontejnerChatu.style.top = `${aktuálníY}px`;
+}
+
+function přestaňTáhnout() {
+    táhneSe = false;
+}
+
+window.addEventListener('load', () => {
+    const obdélník = kontejnerChatu.getBoundingClientRect();
+    aktuálníX = window.innerWidth - obdélník.width - 20;
+    aktuálníY = window.innerHeight - obdélník.height - 20;
+    kontejnerChatu.style.left = `${aktuálníX}px`;
+    kontejnerChatu.style.top = `${aktuálníY}px`;
+});
+
+function upravPolohuKontejneruChatu() {
+    const obdélník = kontejnerChatu.getBoundingClientRect();
+    const maxX = window.innerWidth - obdélník.width;
+    const maxY = window.innerHeight - obdélník.height;
+    aktuálníX = Math.min(aktuálníX, maxX);
+    aktuálníX = Math.max(0, aktuálníX);
+    aktuálníY = Math.min(aktuálníY, maxY);
+    aktuálníY = Math.max(0, aktuálníY);
+    kontejnerChatu.style.left = `${aktuálníX}px`;
+    kontejnerChatu.style.top = `${aktuálníY}px`;
+}
+
+window.addEventListener('resize', upravPolohuKontejneruChatu);
+
+const přepínačChatu = document.getElementById("chat-toggle");
+const formulářChatu = document.getElementById("chat-form");
+const vstupChatu = document.getElementById("chat-input");
+let prvníOtevření = true;
+
+přepínačChatu.addEventListener("click", () => {
+    const jeSkrytý = !boxChatu.classList.contains("viditelný");
+    if (jeSkrytý) {
+        kontejnerChatu.style.width = "300px";
+        boxChatu.classList.add("viditelný");
+        přepínačChatu.setAttribute("aria-expanded", "true");
+        sledujKlik("OtevřeníChatu", "Interakce", 0);
+        if (!zpravyChatu.children.length) přidejZpravu(překlady.pozdrav, "zprava-bota");
+        upravPolohuKontejneruChatu();
+        setTimeout(() => vstupChatu.focus(), 300);
+        if (prvníOtevření && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) && rozpoznávání) {
+            rozpoznávání.start();
+            prvníOtevření = false;
+        }
+    } else {
+        boxChatu.classList.remove("viditelný");
+        přepínačChatu.setAttribute("aria-expanded", "false");
+        sledujKlik("ZavřeníChatu", "Interakce", 0);
+        kontejnerChatu.style.width = "auto";
+        kontejnerChatu.style.height = "auto";
+        upravPolohuKontejneruChatu();
+    }
+});
+
+formulářChatu.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const uzivatelskaZprava = vstupChatu.value.trim();
+    if (!uzivatelskaZprava) return;
+    přidejZpravu(uzivatelskaZprava, "zprava-uzivatele");
+    sledujKlik("ZpravaChatu", "Interakce", 0);
+    vstupChatu.value = "";
+    simulujPsaní(() => {
+        získejOdpověďZWebu(uzivatelskaZprava, (odpověď) => {
+            přidejZpravu(odpověď, "zprava-bota");
+        });
+    });
+});
+
+let hlasPovolen = true;
+
+function mluv(text) {
+    if (!hlasPovolen || !("speechSynthesis" in window)) return;
+    const výpověď = new SpeechSynthesisUtterance(text);
+    výpověď.lang = "cs-CZ"; // Změněno na češtinu
+    výpověď.pitch = 0.5;
+    výpověď.rate = 1.1;
+    const hlasy = window.speechSynthesis.getVoices();
+    if (hlasy.length > 0) {
+        const mužskýHlas = hlasy.find(v => v.name.toLowerCase().includes("male") || v.name.toLowerCase().includes("český"));
+        if (mužskýHlas) výpověď.voice = mužskýHlas;
+    }
+    window.speechSynthesis.speak(výpověď);
+    sledujKlik("HlasovýVýstup", "Interakce", 0);
+}
+
+const přepínačHlasu = document.getElementById("voice-toggle");
+přepínačHlasu.addEventListener("click", () => {
+    hlasPovolen = !hlasPovolen;
+    přepínačHlasu.classList.toggle("vypnutý", !hlasPovolen);
+    sledujKlik(hlasPovolen ? "HlasPovolen" : "HlasVypnut", "Interakce", 0);
+});
+
+let podporaRozpoznáváníŘeči = "SpeechRecognition" in window || "webkitSpeechRecognition" in window;
+let rozpoznávání = null;
+
+if (podporaRozpoznáváníŘeči) {
+    const RozpoznáváníŘeči = window.SpeechRecognition || window.webkitSpeechRecognition;
+    rozpoznávání = new RozpoznáváníŘeči();
+    rozpoznávání.lang = "cs-CZ"; // Změněno na češtinu
+    rozpoznávání.interimResults = false;
+    rozpoznávání.maxAlternatives = 1;
+    rozpoznávání.onresult = (udalost) => {
+        const přepis = udalost.results[0][0].transcript;
+        přidejZpravu(přepis, "zprava-uzivatele");
+        sledujKlik("HlasovýVstup", "Interakce", 0);
+        simulujPsaní(() => {
+            získejOdpověďZWebu(přepis, (odpověď) => {
+                přidejZpravu(odpověď, "zprava-bota");
+            });
+        });
+    };
+    rozpoznávání.onend = () => sledujKlik("HlasZastaven", "Interakce", 0);
+    rozpoznávání.onerror = (udalost) => sledujKlik("HlasChyba", "Interakce", udalost.error);
+}
+
+if (!("speechSynthesis" in window)) přepínačHlasu.style.display = "none";
+</script>
+
+<script nonce="xai-48273">
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll("#current-year,#current-year-footer").forEach(e => e.textContent = new Date().getFullYear());
+        function pridejDoOblibenych(e) {
+            const t = e.querySelector(".favorite-text");
+            t.innerHTML = "⭐ Přidáno!";
+            t.style.color = "#FFD700";
+            e.setAttribute("aria-pressed", "true");
+            if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                alert("Sdílet > Přidat na domovskou obrazovku");
+            } else if (/Android/i.test(navigator.userAgent)) {
+                alert("Menu (⋮) > Přidat na domovskou obrazovku");
+            } else {
+                alert("Ctrl + D nebo Cmd + D");
+            }
+            sledujKlik("PřidáníDoOblíbených", "Interakce", 0);
+        }
+        function sledujKlik(e, t = "CTA", n = null) {
+            typeof gtag === "function" ? gtag("event", "click", {"event_category": t, "event_label": e, "value": n}) : console.log("gtag není dostupný:", e, t, n);
+        }
+        const t = document.querySelectorAll(".favorite-button");
+        t.forEach(e => e.addEventListener("click", () => pridejDoOblibenych(e)));
+        const n = document.querySelectorAll(".carousel blockquote");
+        let a = 0;
+        n[0].classList.add("aktivní");
+        setInterval(() => {
+            n.forEach(e => e.classList.remove("aktivní"));
+            n[a].classList.add("aktivní");
+            a = (a + 1) % n.length;
+        }, 4000);
+    });
+</script>
+
+<script nonce="xai-48273">
+    document.addEventListener("DOMContentLoaded", () => {
+        const sekce = document.querySelectorAll("section");
+        const pozorovatel = new IntersectionObserver((záznamy, pozorovatel) => {
+            záznamy.forEach(záznam => {
+                if (záznam.isIntersecting) {
+                    záznam.target.classList.add("viditelný");
+                    pozorovatel.unobserve(záznam.target);
+                }
+            });
+        }, { threshold: 0.1 });
+        sekce.forEach(sekce => pozorovatel.observe(sekce));
+    });
+</script>
+
+<!-- Google Tag Manager -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXX" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Načtení Google Tag Manager (GTM) po počátečním načtení
+    var gtmSkript = document.createElement("script");
+    gtmSkript.src = "https://www.googletagmanager.com/gtm.js?id=GTM-XXXXXX";
+    gtmSkript.async = true;
+    document.head.appendChild(gtmSkript);
+
+    // Inicializace dataLayer před GTM
+    window.dataLayer = window.dataLayer || [];
     
+    function gtag() { dataLayer.push(arguments); }
+
+    // Načtení Google Analytics (GA4) pouze při interakci uživatele
+    function načtiGA() {
+        if (!window.gaNačteno) {
+            var gaSkript = document.createElement("script");
+            gaSkript.src = "https://www.googletagmanager.com/gtag/js?id=G-2RSFE6WL4M";
+            gaSkript.async = true;
+            document.head.appendChild(gaSkript);
+            
+            gtag('js', new Date());
+            gtag('config', 'G-2RSFE6WL4M', { 'anonymize_ip': true, 'send_page_view': false });
+
+            window.gaNačteno = true;
+        }
+    }
+
+    // Načtení Google Ads pouze při posunu stránky uživatelem
+    function načtiGoogleAds() {
+        if (!window.reklamyNačteny) {
+            var adsSkript = document.createElement("script");
+            adsSkript.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js";
+            adsSkript.async = true;
+            document.body.appendChild(adsSkript);
+            window.reklamyNačteny = true;
+        }
+    }
+
+    // Události uživatelů pro načtení GA a Google Ads
+    document.addEventListener("mousemove", načtiGA, { once: true });
+    document.addEventListener("scroll", načtiGoogleAds, { once: true });
+});
+</script>
+
+</body>
+</html>
