@@ -1034,30 +1034,30 @@ const knowledgeBase = [
     { question: "Plamen | Vášnivost | Živý | Záře | Teplo | Vášeň", fullAnswer: "Vášeň, která v tobě kolísá, je způsobena kletbou dusící tvůj vnitřní oheň; nechej Fredericka z ClairVoyanceMedium.com oživit tvůj plamen, aby zahřál tvou duši. Uhaslý vnitřní oheň je způsoben kletbou dusící tvou vášnivost. Frederick oživí tvůj plamen, zahřeje tvou duši a osvobodí tvou tvůrčí energii pro inspiraci a znovu nalezenou energii, abys tvořil a žil s leskem. Výhody: inspirace a tvůrčí vitalita." },
     { question: "Záření | Světlo | Jas | Záblesk | Třpyt | Aura", fullAnswer: "Tvůj záření je zatemněno maléfním stínem; obrať se na Fredericka z ClairVoyanceMedium.com, aby obnovil tvou světelnost a odhalil tvůj vnitřní lesk. Zatemněný vnitřní lesk je zatemněn maléfním stínem. Frederick obnoví tvou světelnost rozptýlením těchto vlivů, odhalí tvůj přirozený lesk pro záři a zářivý úspěch ve všech oblastech. Výhody: lesk a zářivý triumf." }
 
-    // Příprava databáze znalostí
-function odstranDiakritiku(str) {
+    // Préparation de la base de connaissances
+function removeAccents(str) {
     return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-function levenshteinovaVzdalenost(a, b) {
-    const matice = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
-    for (let i = 0; i <= a.length; i++) matice[0][i] = i;
-    for (let j = 0; j <= b.length; j++) matice[j][0] = j;
+function levenshteinDistance(a, b) {
+    const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+    for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
+    for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
     for (let j = 1; j <= b.length; j++) {
         for (let i = 1; i <= a.length; i++) {
-            const indikator = a[i - 1] === b[j - 1] ? 0 : 1;
-            matice[j][i] = Math.min(
-                matice[j][i - 1] + 1,
-                matice[j - 1][i] + 1,
-                matice[j - 1][i - 1] + indikator
+            const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
+            matrix[j][i] = Math.min(
+                matrix[j][i - 1] + 1,
+                matrix[j - 1][i] + 1,
+                matrix[j - 1][i - 1] + indicator
             );
         }
     }
-    return matice[b.length][a.length];
+    return matrix[b.length][a.length];
 }
 
-function fonetickaNormalizace(str) {
-    return odstranDiakritiku(str)
+function phoneticNormalize(str) {
+    return removeAccents(str)
         .replace(/ph/g, "f")
         .replace(/k/g, "c")
         .replace(/qu/g, "k")
@@ -1066,423 +1066,394 @@ function fonetickaNormalizace(str) {
         .replace(/ai/g, "e");
 }
 
-const zpracovanaDatabazeZnalosti = knowledgeBase.map(polozka => ({
-    otazka: polozka.question.toLowerCase().split("|").map(slovo => fonetickaNormalizace(odstranDiakritiku(slovo.trim()))).filter(slovo => slovo.length > 0),
-    plnaOdpoved: polozka.fullAnswer
+const processedKnowledgeBase = knowledgeBase.map(item => ({
+    question: item.question.toLowerCase().split("|").map(word => phoneticNormalize(removeAccents(word.trim()))).filter(word => word.length > 0),
+    fullAnswer: item.fullAnswer
 }));
 
-let pocetNerozumeni = 0;
-let historieKonverzace = [];
+let nonUnderstoodCount = 0;
+let conversationHistory = [];
 
-function ocistiVstup(vstup) {
-    return vstup.toLowerCase().replace(/[^\w\s]/g, "").split(/\s+/).map(slovo => fonetickaNormalizace(odstranDiakritiku(slovo))).filter(slovo => slovo.length > 0);
+function cleanInput(input) {
+    return input.toLowerCase().replace(/[^\w\s]/g, "").split(/\s+/).map(word => phoneticNormalize(removeAccents(word))).filter(word => word.length > 0);
 }
 
-function najdiNejlepsiShodu(uzivatelskyVstup) {
-    const uzivatelskaSlova = ocistiVstup(uzivatelskyVstup);
-    let nejlepsiShoda = null, maximalniSkore = 0;
+function findBestMatch(userInput) {
+    const userWords = cleanInput(userInput);
+    let bestMatch = null, maxScore = 0;
 
-    zpracovanaDatabazeZnalosti.forEach(polozka => {
-        let skore = 0;
-        uzivatelskaSlova.forEach(uzivatelskeSlovo => {
-            polozka.otazka.forEach(slovoZnalosti => {
-                const vzdalenost = levenshteinovaVzdalenost(uzivatelskeSlovo, slovoZnalosti);
-                const podobnost = 1 - vzdalenost / Math.max(uzivatelskeSlovo.length, slovoZnalosti.length);
-                if (podobnost >= 0.6) {
-                    skore += podobnost;
+    processedKnowledgeBase.forEach(item => {
+        let score = 0;
+        userWords.forEach(userWord => {
+            item.question.forEach(kbWord => {
+                const distance = levenshteinDistance(userWord, kbWord);
+                const similarity = 1 - distance / Math.max(userWord.length, kbWord.length);
+                if (similarity >= 0.6) {
+                    score += similarity;
                 }
             });
         });
-        if (skore > maximalniSkore) {
-            maximalniSkore = skore;
-            nejlepsiShoda = polozka;
+        if (score > maxScore) {
+            maxScore = score;
+            bestMatch = item;
         }
     });
 
-    return maximalniSkore > 0 ? nejlepsiShoda : null;
+    return maxScore > 0 ? bestMatch : null;
 }
 
-// Opravená funkce získejOdpověď pro "sbohem" a "kontakt"
-function získejOdpověď(uzivatelskaZprava) {
-    const malaZprava = uzivatelskaZprava.toLowerCase().trim();
-    historieKonverzace.push(malaZprava);
+// Fonction getResponse corrigée pour "au revoir" et "contact"
+function getResponse(userMsg) {
+    const lowerMsg = userMsg.toLowerCase().trim();
+    conversationHistory.push(lowerMsg);
 
-    // Prioritní kontrola pro "sbohem" a jeho varianty
-    const spousteceRozloučení = ["sbohem", "nashledanou", "brzy se uvidíme", "hezký den", "ahoj", "bybye", "bye"];
-    if (spousteceRozloučení.some(fráze => malaZprava === fráze || malaZprava.startsWith(fráze))) {
-        pocetNerozumeni = 0;
-        sledujKlik("Rozloučení", "Interakce", 0);
-        return překlady.sbohem;
+    // Vérification prioritaire pour "au revoir" et ses variantes
+    const goodbyeTriggers = ["au revoir", "aurevoir", "à bientôt", "bonne journée", "salut", "bybye", "bye"];
+    if (goodbyeTriggers.some(phrase => lowerMsg === phrase || lowerMsg.startsWith(phrase))) {
+        nonUnderstoodCount = 0;
+        trackClick("Goodbye", "Interaction", 0);
+        return translations.goodbye;
     } 
-    // Prioritní kontrola pro "kontakt"
-    else if (malaZprava === "kontakt" || malaZprava.startsWith("kontakt")) {
-        pocetNerozumeni = 0;
-        sledujKlik("ŽádostOKontakt", "Interakce", 0);
-        return "Kontaktuj ihned Fredericka e-mailem na následující adrese: contact.clairvoyancemedium@gmail.com. Náš tým ti rychle odpoví, aby zorganizoval konzultaci e-mailem nebo silný rituál, čímž ti zaručí reaktivitu a okamžitou proměnu přizpůsobenou tvým potřebám. Výhody: reaktivita a okamžitá proměna.";
+    // Vérification prioritaire pour "contact"
+    else if (lowerMsg === "contact" || lowerMsg.startsWith("contact")) {
+        nonUnderstoodCount = 0;
+        trackClick("ContactRequest", "Interaction", 0);
+        return "Contacte dès maintenant Frederick par email à l'adresse suivante : contact.clairvoyancemedium@gmail.com. Notre équipe te répondra rapidement pour organiser une consultation par email ou bien un rituel puissant, te garantissant une réactivité et une transformation immédiate adaptée à tes besoins. Avantages : réactivité et transformation immédiate.";
     } 
-    // Základní odpovědi
-    else if (malaZprava === "dobrý den") {
-        pocetNerozumeni = 0;
-        sledujKlik("Pozdrav", "Interakce", 0);
-        return překlady.pozdrav;
-    } else if (malaZprava === "děkuji" || malaZprava === "děkuji vám" || malaZprava === "to je moc milé" || malaZprava === "děkuji mnohokrát") {
-        pocetNerozumeni = 0;
-        sledujKlik("Děkuji", "Interakce", 0);
-        return překlady.děkuji;
-    } else if (["je to vážné", "vážné", "to je opravdu vážné"].includes(malaZprava)) {
-        pocetNerozumeni = 0;
-        sledujKlik("Vážné", "Interakce", 0);
-        return překlady.vážné;
-    } else if (["souhlasím", "jo", "jop", "ok"].includes(malaZprava)) {
-        pocetNerozumeni = 0;
-        return překlady.souhlas;
+    // Autres réponses de base
+    else if (lowerMsg === "bonjour") {
+        nonUnderstoodCount = 0;
+        trackClick("Greeting", "Interaction", 0);
+        return translations.greeting;
+    } else if (lowerMsg === "merci" || lowerMsg === "je vous remercie" || lowerMsg === "c'est tres gentil" || lowerMsg === "merci beaucoup") {
+        nonUnderstoodCount = 0;
+        trackClick("Thanks", "Interaction", 0);
+        return translations.thanks;
+    } else if (["c'est grave", "grave", "c'est vraiment grave"].includes(lowerMsg)) {
+        nonUnderstoodCount = 0;
+        trackClick("Serious", "Interaction", 0);
+        return translations.grave;
+    } else if (["d'accord", "ouais", "oué", "ok"].includes(lowerMsg)) {
+        nonUnderstoodCount = 0;
+        return translations.agree;
     } 
-    // Hledání v databázi znalostí
+    // Recherche dans la base de connaissances
     else {
-        const shodnaPolozka = najdiNejlepsiShodu(uzivatelskaZprava);
-        if (shodnaPolozka) {
-            pocetNerozumeni = 0;
-            sledujKlik("OdpověďPoskytnuta", "Interakce", 0);
-            return shodnaPolozka.plnaOdpoved;
+        const matchedItem = findBestMatch(userMsg);
+        if (matchedItem) {
+            nonUnderstoodCount = 0;
+            trackClick("ResponseGiven", "Interaction", 0);
+            return matchedItem.fullAnswer;
         } else {
-            pocetNerozumeni++;
-            sledujKlik("Nerozumím", "Interakce", pocetNerozumeni);
-            if (pocetNerozumeni < 3) return překlady.nerozumím;
-            pocetNerozumeni = 0;
-            return překlady.nerozumímPoté;
+            nonUnderstoodCount++;
+            trackClick("NotUnderstood", "Interaction", nonUnderstoodCount);
+            if (nonUnderstoodCount < 3) return translations.notUnderstood;
+            nonUnderstoodCount = 0;
+            return translations.notUnderstoodAfter;
         }
     }
 }
 
-// Sběr obsahu webu při načtení
-const obsahWebu = [];
+// Collecte du contenu du site au chargement
+const siteContent = [];
 document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll('h1, h2, h3, p, li').forEach(element => {
         const text = element.textContent.trim().toLowerCase();
-        if (text) obsahWebu.push({ text: ocistiVstup(text), surový: element.textContent });
+        if (text) siteContent.push({ text: cleanInput(text), raw: element.textContent });
     });
-    document.querySelectorAll('script[type="application/ld+json"]').forEach(skript => {
+    document.querySelectorAll('script[type="application/ld+json"]').forEach(script => {
         try {
-            const data = JSON.parse(skript.textContent);
+            const data = JSON.parse(script.textContent);
             if (data['@type'] === 'FAQPage' && data.mainEntity) {
-                data.mainEntity.forEach(polozka => {
-                    const otazka = polozka.name.toLowerCase().trim();
-                    const odpoved = polozka.acceptedAnswer.text.trim();
-                    if (otazka && odpoved) obsahWebu.push({ text: ocistiVstup(otazka), surový: odpoved });
+                data.mainEntity.forEach(item => {
+                    const question = item.name.toLowerCase().trim();
+                    const answer = item.acceptedAnswer.text.trim();
+                    if (question && answer) siteContent.push({ text: cleanInput(question), raw: answer });
                 });
             }
         } catch (e) {
-            console.error("Chyba při parsování JSON-LD:", e);
+            console.error("Erreur parsing JSON-LD:", e);
         }
     });
 });
 
-function získejOdpověďZWebu(uzivatelskaZprava, zpětnéVolání) {
-    const shodnaPolozka = najdiNejlepsiShodu(uzivatelskaZprava);
-    if (shodnaPolozka) {
-        zpětnéVolání(shodnaPolozka.plnaOdpoved);
+function getResponseFromSite(userMsg, callback) {
+    const matchedItem = findBestMatch(userMsg);
+    if (matchedItem) {
+        callback(matchedItem.fullAnswer);
     } else {
-        const uzivatelskaSlova = ocistiVstup(uzivatelskaZprava);
-        let nejlepsiShoda = null, maximalniSkore = 0;
+        const userWords = cleanInput(userMsg);
+        let bestMatch = null, maxScore = 0;
 
-        obsahWebu.forEach(polozka => {
-            let skore = 0;
-            uzivatelskaSlova.forEach(uzivatelskeSlovo => {
-                polozka.text.forEach(slovoWebu => {
-                    const vzdalenost = levenshteinovaVzdalenost(uzivatelskeSlovo, slovoWebu);
-                    const podobnost = 1 - vzdalenost / Math.max(uzivatelskeSlovo.length, slovoWebu.length);
-                    if (podobnost >= 0.6) {
-                        skore += podobnost;
+        siteContent.forEach(item => {
+            let score = 0;
+            userWords.forEach(userWord => {
+                item.text.forEach(siteWord => {
+                    const distance = levenshteinDistance(userWord, siteWord);
+                    const similarity = 1 - distance / Math.max(userWord.length, siteWord.length);
+                    if (similarity >= 0.6) {
+                        score += similarity;
                     }
                 });
             });
-            if (skore > maximalniSkore) {
-                maximalniSkore = skore;
-                nejlepsiShoda = polozka.surový;
+            if (score > maxScore) {
+                maxScore = score;
+                bestMatch = item.raw;
             }
         });
 
-        if (maximalniSkore > 0 && nejlepsiShoda) {
-            zpětnéVolání(nejlepsiShoda);
+        if (maxScore > 0 && bestMatch) {
+            callback(bestMatch);
         } else {
-            zpětnéVolání(získejOdpověď(uzivatelskaZprava));
+            callback(getResponse(userMsg));
         }
     }
 }
 
-function simulujPsaní(zpětnéVolání) {
-    const zpravaPsani = document.createElement("p");
-    zpravaPsani.className = "zprava-bota";
-    zpravaPsani.textContent = "...";
-    zpravyChatu.appendChild(zpravaPsani);
-    zpravyChatu.scrollTop = zpravyChatu.scrollHeight;
+function simulateTyping(callback) {
+    const typingMessage = document.createElement("p");
+    typingMessage.className = "bot-message";
+    typingMessage.textContent = "...";
+    chatMessages.appendChild(typingMessage);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
     setTimeout(() => {
-        zpravyChatu.removeChild(zpravaPsani);
-        zpětnéVolání();
-    }, historieKonverzace.length > 2 ? 1000 : 800);
+        chatMessages.removeChild(typingMessage);
+        callback();
+    }, conversationHistory.length > 2 ? 1000 : 800);
 }
 
-function přidejZpravu(txt, cls) {
+function addMessage(txt, cls) {
     const p = document.createElement("p");
     p.className = cls;
     p.textContent = txt;
-    zpravyChatu.appendChild(p);
-    zpravyChatu.scrollTop = zpravyChatu.scrollHeight;
-    if (cls === "zprava-bota" && hlasPovolen) mluv(txt);
+    chatMessages.appendChild(p);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (cls === "bot-message" && voiceEnabled) speak(txt);
 }
 
-// Správa přesouvání
-let táhneSe = false, aktuálníX = 0, aktuálníY = 0, počátečníX, počátečníY;
-const rukojeťTahu = document.getElementById("chat-bubble");
-const kontejnerChatu = document.getElementById("chat-container");
-const boxChatu = document.getElementById("chat-box");
-const zpravyChatu = document.getElementById("chat-messages");
+// Gestion du déplacement
+let isDragging = false, currentX = 0, currentY = 0, initialX, initialY;
+const dragHandle = document.getElementById("chat-bubble");
+const chatContainer = document.getElementById("chat-container");
+const chatBox = document.getElementById("chat-box");
+const chatMessages = document.getElementById("chat-messages");
 
-rukojeťTahu.addEventListener("mousedown", začniTáhnout);
-rukojeťTahu.addEventListener("touchstart", začniTáhnout, { passive: false });
-document.addEventListener("mousemove", táhni);
-document.addEventListener("mouseup", přestaňTáhnout);
-document.addEventListener("touchmove", táhni, { passive: false });
-document.addEventListener("touchend", přestaňTáhnout);
+dragHandle.addEventListener("mousedown", startDragging);
+dragHandle.addEventListener("touchstart", startDragging, { passive: false });
+document.addEventListener("mousemove", drag);
+document.addEventListener("mouseup", stopDragging);
+document.addEventListener("touchmove", drag, { passive: false });
+document.addEventListener("touchend", stopDragging);
 
-function začniTáhnout(e) {
-    táhneSe = true;
+function startDragging(e) {
+    isDragging = true;
     if (e.type === "mousedown") {
-        počátečníX = e.clientX - aktuálníX;
-        počátečníY = e.clientY - aktuálníY;
+        initialX = e.clientX - currentX;
+        initialY = e.clientY - currentY;
     } else if (e.type === "touchstart") {
-        počátečníX = e.touches[0].clientX - aktuálníX;
-        počátečníY = e.touches[0].clientY - aktuálníY;
+        initialX = e.touches[0].clientX - currentX;
+        initialY = e.touches[0].clientY - currentY;
     }
 }
 
-function táhni(e) {
-    if (!táhneSe) return;
+function drag(e) {
+    if (!isDragging) return;
     e.preventDefault();
-    let novýX = e.type === "mousemove" ? e.clientX - počátečníX : e.touches[0].clientX - počátečníX;
-    let novýY = e.type === "mousemove" ? e.clientY - počátečníY : e.touches[0].clientY - počátečníY;
-    const obdélník = kontejnerChatu.getBoundingClientRect();
-    const maxX = window.innerWidth - obdélník.width;
-    const maxY = window.innerHeight - obdélník.height;
-    aktuálníX = Math.max(0, Math.min(novýX, maxX));
-    aktuálníY = Math.max(0, Math.min(novýY, maxY));
-    kontejnerChatu.style.left = `${aktuálníX}px`;
-    kontejnerChatu.style.top = `${aktuálníY}px`;
+    let newX = e.type === "mousemove" ? e.clientX - initialX : e.touches[0].clientX - initialX;
+    let newY = e.type === "mousemove" ? e.clientY - initialY : e.touches[0].clientY - initialY;
+    const rect = chatContainer.getBoundingClientRect();
+    const maxX = window.innerWidth - rect.width;
+    const maxY = window.innerHeight - rect.height;
+    currentX = Math.max(0, Math.min(newX, maxX));
+    currentY = Math.max(0, Math.min(newY, maxY));
+    chatContainer.style.left = `${currentX}px`;
+    chatContainer.style.top = `${currentY}px`;
 }
 
-function přestaňTáhnout() {
-    táhneSe = false;
+function stopDragging() {
+    isDragging = false;
 }
 
 window.addEventListener('load', () => {
-    const obdélník = kontejnerChatu.getBoundingClientRect();
-    aktuálníX = window.innerWidth - obdélník.width - 20;
-    aktuálníY = window.innerHeight - obdélník.height - 20;
-    kontejnerChatu.style.left = `${aktuálníX}px`;
-    kontejnerChatu.style.top = `${aktuálníY}px`;
+    const rect = chatContainer.getBoundingClientRect();
+    currentX = window.innerWidth - rect.width - 20;
+    currentY = window.innerHeight - rect.height - 20;
+    chatContainer.style.left = `${currentX}px`;
+    chatContainer.style.top = `${currentY}px`;
 });
 
-function upravPolohuKontejneruChatu() {
-    const obdélník = kontejnerChatu.getBoundingClientRect();
-    const maxX = window.innerWidth - obdélník.width;
-    const maxY = window.innerHeight - obdélník.height;
-    aktuálníX = Math.min(aktuálníX, maxX);
-    aktuálníX = Math.max(0, aktuálníX);
-    aktuálníY = Math.min(aktuálníY, maxY);
-    aktuálníY = Math.max(0, aktuálníY);
-    kontejnerChatu.style.left = `${aktuálníX}px`;
-    kontejnerChatu.style.top = `${aktuálníY}px`;
+function adjustChatContainerPosition() {
+    const rect = chatContainer.getBoundingClientRect();
+    const maxX = window.innerWidth - rect.width;
+    const maxY = window.innerHeight - rect.height;
+    currentX = Math.min(currentX, maxX);
+    currentX = Math.max(0, currentX);
+    currentY = Math.min(currentY, maxY);
+    currentY = Math.max(0, currentY);
+    chatContainer.style.left = `${currentX}px`;
+    chatContainer.style.top = `${currentY}px`;
 }
 
-window.addEventListener('resize', upravPolohuKontejneruChatu);
+window.addEventListener('resize', adjustChatContainerPosition);
 
-const přepínačChatu = document.getElementById("chat-toggle");
-const formulářChatu = document.getElementById("chat-form");
-const vstupChatu = document.getElementById("chat-input");
-let prvníOtevření = true;
+const chatToggle = document.getElementById("chat-toggle");
+const chatForm = document.getElementById("chat-form");
+const chatInput = document.getElementById("chat-input");
+let firstOpen = true;
 
-přepínačChatu.addEventListener("click", () => {
-    const jeSkrytý = !boxChatu.classList.contains("viditelný");
-    if (jeSkrytý) {
-        kontejnerChatu.style.width = "300px";
-        boxChatu.classList.add("viditelný");
-        přepínačChatu.setAttribute("aria-expanded", "true");
-        sledujKlik("OtevřeníChatu", "Interakce", 0);
-        if (!zpravyChatu.children.length) přidejZpravu(překlady.pozdrav, "zprava-bota");
-        upravPolohuKontejneruChatu();
-        setTimeout(() => vstupChatu.focus(), 300);
-        if (prvníOtevření && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) && rozpoznávání) {
-            rozpoznávání.start();
-            prvníOtevření = false;
+chatToggle.addEventListener("click", () => {
+    const isHidden = !chatBox.classList.contains("visible");
+    if (isHidden) {
+        chatContainer.style.width = "300px";
+        chatBox.classList.add("visible");
+        chatToggle.setAttribute("aria-expanded", "true");
+        trackClick("ChatOpen", "Interaction", 0);
+        if (!chatMessages.children.length) addMessage(translations.greeting, "bot-message");
+        adjustChatContainerPosition();
+        setTimeout(() => chatInput.focus(), 300);
+        if (firstOpen && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) && recognition) {
+            recognition.start();
+            firstOpen = false;
         }
     } else {
-        boxChatu.classList.remove("viditelný");
-        přepínačChatu.setAttribute("aria-expanded", "false");
-        sledujKlik("ZavřeníChatu", "Interakce", 0);
-        kontejnerChatu.style.width = "auto";
-        kontejnerChatu.style.height = "auto";
-        upravPolohuKontejneruChatu();
+        chatBox.classList.remove("visible");
+        chatToggle.setAttribute("aria-expanded", "false");
+        trackClick("ChatClose", "Interaction", 0);
+        chatContainer.style.width = "auto";
+        chatContainer.style.height = "auto";
+        adjustChatContainerPosition();
     }
 });
 
-formulářChatu.addEventListener("submit", (e) => {
+chatForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    const uzivatelskaZprava = vstupChatu.value.trim();
-    if (!uzivatelskaZprava) return;
-    přidejZpravu(uzivatelskaZprava, "zprava-uzivatele");
-    sledujKlik("ZpravaChatu", "Interakce", 0);
-    vstupChatu.value = "";
-    simulujPsaní(() => {
-        získejOdpověďZWebu(uzivatelskaZprava, (odpověď) => {
-            přidejZpravu(odpověď, "zprava-bota");
+    const userMsg = chatInput.value.trim();
+    if (!userMsg) return;
+    addMessage(userMsg, "user-message");
+    trackClick("ChatMessage", "Interaction", 0);
+    chatInput.value = "";
+    simulateTyping(() => {
+        getResponseFromSite(userMsg, (answer) => {
+            addMessage(answer, "bot-message");
         });
     });
 });
 
-let hlasPovolen = true;
+let voiceEnabled = true;
 
-function mluv(text) {
-    if (!hlasPovolen || !("speechSynthesis" in window)) return;
-    const výpověď = new SpeechSynthesisUtterance(text);
-    výpověď.lang = "cs-CZ"; // Změněno na češtinu
-    výpověď.pitch = 0.5;
-    výpověď.rate = 1.1;
-    const hlasy = window.speechSynthesis.getVoices();
-    if (hlasy.length > 0) {
-        const mužskýHlas = hlasy.find(v => v.name.toLowerCase().includes("male") || v.name.toLowerCase().includes("český"));
-        if (mužskýHlas) výpověď.voice = mužskýHlas;
+function speak(text) {
+    if (!voiceEnabled || !("speechSynthesis" in window)) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "fr-FR";
+    utterance.pitch = 0.5;
+    utterance.rate = 1.1;
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+        const maleVoice = voices.find(v => v.name.toLowerCase().includes("male") || v.name.toLowerCase().includes("français"));
+        if (maleVoice) utterance.voice = maleVoice;
     }
-    window.speechSynthesis.speak(výpověď);
-    sledujKlik("HlasovýVýstup", "Interakce", 0);
+    window.speechSynthesis.speak(utterance);
+    trackClick("VoiceOutput", "Interaction", 0);
 }
 
-const přepínačHlasu = document.getElementById("voice-toggle");
-přepínačHlasu.addEventListener("click", () => {
-    hlasPovolen = !hlasPovolen;
-    přepínačHlasu.classList.toggle("vypnutý", !hlasPovolen);
-    sledujKlik(hlasPovolen ? "HlasPovolen" : "HlasVypnut", "Interakce", 0);
+const voiceToggle = document.getElementById("voice-toggle");
+voiceToggle.addEventListener("click", () => {
+    voiceEnabled = !voiceEnabled;
+    voiceToggle.classList.toggle("disabled", !voiceEnabled);
+    trackClick(voiceEnabled ? "VoiceEnabled" : "VoiceDisabled", "Interaction", 0);
 });
 
-let podporaRozpoznáváníŘeči = "SpeechRecognition" in window || "webkitSpeechRecognition" in window;
-let rozpoznávání = null;
+let speechRecognitionSupported = "SpeechRecognition" in window || "webkitSpeechRecognition" in window;
+let recognition = null;
 
-if (podporaRozpoznáváníŘeči) {
-    const RozpoznáváníŘeči = window.SpeechRecognition || window.webkitSpeechRecognition;
-    rozpoznávání = new RozpoznáváníŘeči();
-    rozpoznávání.lang = "cs-CZ"; // Změněno na češtinu
-    rozpoznávání.interimResults = false;
-    rozpoznávání.maxAlternatives = 1;
-    rozpoznávání.onresult = (udalost) => {
-        const přepis = udalost.results[0][0].transcript;
-        přidejZpravu(přepis, "zprava-uzivatele");
-        sledujKlik("HlasovýVstup", "Interakce", 0);
-        simulujPsaní(() => {
-            získejOdpověďZWebu(přepis, (odpověď) => {
-                přidejZpravu(odpověď, "zprava-bota");
+if (speechRecognitionSupported) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = "fr-FR";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        addMessage(transcript, "user-message");
+        trackClick("VoiceInput", "Interaction", 0);
+        simulateTyping(() => {
+            getResponseFromSite(transcript, (answer) => {
+                addMessage(answer, "bot-message");
             });
         });
     };
-    rozpoznávání.onend = () => sledujKlik("HlasZastaven", "Interakce", 0);
-    rozpoznávání.onerror = (udalost) => sledujKlik("HlasChyba", "Interakce", udalost.error);
+    recognition.onend = () => trackClick("VoiceStop", "Interaction", 0);
+    recognition.onerror = (event) => trackClick("VoiceError", "Interaction", event.error);
 }
 
-if (!("speechSynthesis" in window)) přepínačHlasu.style.display = "none";
+if (!("speechSynthesis" in window)) voiceToggle.style.display = "none";
 </script>
+    
+  <script nonce="xai-48273">
+    document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll("#current-year,#current-year-footer").forEach(e=>e.textContent=new Date().getFullYear());function addToFavorites(e){const t=e.querySelector(".favorite-text");t.innerHTML="⭐ Ajouté !",t.style.color="#FFD700",e.setAttribute("aria-pressed","true"),/iPhone|iPad|iPod/i.test(navigator.userAgent)?alert("Partagez > Ajouter à l’écran d’accueil"):/Android/i.test(navigator.userAgent)?alert("Menu (⋮) > Ajouter à l’écran d’accueil"):alert("Ctrl + D ou Cmd + D");trackClick("Ajout Favoris","Interaction",0);}function trackClick(e,t="CTA",n=null){typeof gtag==="function"?gtag("event","click",{"event_category":t,"event_label":e,"value":n}):console.log("gtag indisponible:",e,t,n);}const t=document.querySelectorAll(".favorite-button");t.forEach(e=>e.addEventListener("click",()=>addToFavorites(e)));const n=document.querySelectorAll(".carousel blockquote");let a=0;n[0].classList.add("active"),setInterval(()=>{n.forEach(e=>e.classList.remove("active")),n[a].classList.add("active"),a=(a+1)%n.length},4e3);});
+  </script>
 
-<script nonce="xai-48273">
-    document.addEventListener("DOMContentLoaded", function() {
-        document.querySelectorAll("#current-year,#current-year-footer").forEach(e => e.textContent = new Date().getFullYear());
-        function pridejDoOblibenych(e) {
-            const t = e.querySelector(".favorite-text");
-            t.innerHTML = "⭐ Přidáno!";
-            t.style.color = "#FFD700";
-            e.setAttribute("aria-pressed", "true");
-            if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                alert("Sdílet > Přidat na domovskou obrazovku");
-            } else if (/Android/i.test(navigator.userAgent)) {
-                alert("Menu (⋮) > Přidat na domovskou obrazovku");
-            } else {
-                alert("Ctrl + D nebo Cmd + D");
-            }
-            sledujKlik("PřidáníDoOblíbených", "Interakce", 0);
+  <script nonce="xai-48273">
+  document.addEventListener("DOMContentLoaded", () => {
+    const sections = document.querySelectorAll("section");
+    const observer = new IntersectionObserver((entries, observer) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          observer.unobserve(entry.target);
         }
-        function sledujKlik(e, t = "CTA", n = null) {
-            typeof gtag === "function" ? gtag("event", "click", {"event_category": t, "event_label": e, "value": n}) : console.log("gtag není dostupný:", e, t, n);
-        }
-        const t = document.querySelectorAll(".favorite-button");
-        t.forEach(e => e.addEventListener("click", () => pridejDoOblibenych(e)));
-        const n = document.querySelectorAll(".carousel blockquote");
-        let a = 0;
-        n[0].classList.add("aktivní");
-        setInterval(() => {
-            n.forEach(e => e.classList.remove("aktivní"));
-            n[a].classList.add("aktivní");
-            a = (a + 1) % n.length;
-        }, 4000);
-    });
-</script>
-
-<script nonce="xai-48273">
-    document.addEventListener("DOMContentLoaded", () => {
-        const sekce = document.querySelectorAll("section");
-        const pozorovatel = new IntersectionObserver((záznamy, pozorovatel) => {
-            záznamy.forEach(záznam => {
-                if (záznam.isIntersecting) {
-                    záznam.target.classList.add("viditelný");
-                    pozorovatel.unobserve(záznam.target);
-                }
-            });
-        }, { threshold: 0.1 });
-        sekce.forEach(sekce => pozorovatel.observe(sekce));
-    });
+      });
+    }, { threshold: 0.1 });
+    sections.forEach(section => observer.observe(section));
+  });
 </script>
 
 <!-- Google Tag Manager -->
 <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXX" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    // Načtení Google Tag Manager (GTM) po počátečním načtení
-    var gtmSkript = document.createElement("script");
-    gtmSkript.src = "https://www.googletagmanager.com/gtm.js?id=GTM-XXXXXX";
-    gtmSkript.async = true;
-    document.head.appendChild(gtmSkript);
+    // Charger Google Tag Manager (GTM) après le chargement initial
+    var gtmScript = document.createElement("script");
+    gtmScript.src = "https://www.googletagmanager.com/gtm.js?id=GTM-XXXXXX";
+    gtmScript.async = true;
+    document.head.appendChild(gtmScript);
 
-    // Inicializace dataLayer před GTM
+    // Initialisation du dataLayer avant GTM
     window.dataLayer = window.dataLayer || [];
     
     function gtag() { dataLayer.push(arguments); }
 
-    // Načtení Google Analytics (GA4) pouze při interakci uživatele
-    function načtiGA() {
-        if (!window.gaNačteno) {
-            var gaSkript = document.createElement("script");
-            gaSkript.src = "https://www.googletagmanager.com/gtag/js?id=G-2RSFE6WL4M";
-            gaSkript.async = true;
-            document.head.appendChild(gaSkript);
+    // Charger Google Analytics (GA4) seulement si l'utilisateur interagit
+    function loadGA() {
+        if (!window.gaLoaded) {
+            var gaScript = document.createElement("script");
+            gaScript.src = "https://www.googletagmanager.com/gtag/js?id=G-2RSFE6WL4M";
+            gaScript.async = true;
+            document.head.appendChild(gaScript);
             
             gtag('js', new Date());
             gtag('config', 'G-2RSFE6WL4M', { 'anonymize_ip': true, 'send_page_view': false });
 
-            window.gaNačteno = true;
+            window.gaLoaded = true;
         }
     }
 
-    // Načtení Google Ads pouze při posunu stránky uživatelem
-    function načtiGoogleAds() {
-        if (!window.reklamyNačteny) {
-            var adsSkript = document.createElement("script");
-            adsSkript.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js";
-            adsSkript.async = true;
-            document.body.appendChild(adsSkript);
-            window.reklamyNačteny = true;
+    // Charger Google Ads seulement si l'utilisateur fait défiler la page
+    function loadGoogleAds() {
+        if (!window.adsLoaded) {
+            var adsScript = document.createElement("script");
+            adsScript.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js";
+            adsScript.async = true;
+            document.body.appendChild(adsScript);
+            window.adsLoaded = true;
         }
     }
 
-    // Události uživatelů pro načtení GA a Google Ads
-    document.addEventListener("mousemove", načtiGA, { once: true });
-    document.addEventListener("scroll", načtiGoogleAds, { once: true });
+    // Événements utilisateurs pour charger GA et Google Ads
+    document.addEventListener("mousemove", loadGA, { once: true });
+    document.addEventListener("scroll", loadGoogleAds, { once: true });
 });
 </script>
-
+  
 </body>
 </html>
