@@ -1,42 +1,100 @@
-# Indique aux robots que toutes les pages peuvent être explorées, sauf restrictions spécifiées
+# Robots.txt optimalizovaný pro rok 2025 - Překonává excelenci
+# Navrženo pro český trh, umělou inteligenci, Google IA, hlasové asistenty a pokročilé SEO
+# Web: https://clairvoyancemedium.github.io/Hluboke-dalkove-odcarovani-proti-kletbam-ktere-vam-brani-v-zivotnim-pokroku.github.io/
+# Poslední aktualizace: 09/03/2025 14:00 GMT
+# Poznámka: Otestujte pomocí Google Search Console a robotstxt.org pro validaci
+
+##########################
+# Obecné povolení        #
+##########################
 User-agent: *
-Disallow: /admin/
-Disallow: /tmp/
-Disallow: /private/
+Disallow: /soukromy/       # Soukromé adresáře (např. admin, skripty)
+Disallow: /docasne/        # Dočasné složky
+Disallow: /*?*             # Zabraňuje duplicitnímu obsahu (parametry URL)
+Allow: /*.css$             # CSS pro optimální vykreslování (zděděno všemi)
+Allow: /*.js$              # Nezbytné JS (zděděno všemi)
+Allow: /*.pdf$             # Povoluje strategické PDF (např. průvodce)
+Allow: /                   # Výchozí povolení
 
-# Bloquer des URL avec paramètres inutiles pour l'indexation
-Disallow: /*?debug=true
-Disallow: /*?preview=true
-
-# Permettre les fichiers nécessaires au bon affichage et fonctionnement
-Allow: /css/
-Allow: /js/
-Allow: /images/
-
-# Référencement des ressources multimédias
-Allow: *.png
-Allow: *.jpg
-Allow: *.webp
-Allow: *.css
-Allow: *.js
-
-# Fournir le chemin du fichier sitemap pour une meilleure indexation
-Sitemap: https://www.clairvoyancemedium.com/sitemap.xml
-
-# Autorisation pour les robots Google et Bing pour maximiser les campagnes publicitaires
+########################################
+# Googlebot (včetně Google IA 2025)    #
+########################################
 User-agent: Googlebot
-Allow: /
-User-agent: AdsBot-Google
-Allow: /
+Disallow: /soukromy/
+Disallow: /docasne/
+Allow: /ritualy/
+Allow: /ochrana/
+Allow: /odcarovani/
+
+###########################################
+# Hlasové asistenti                       #
+###########################################
+User-agent: Googlebot-Voice
+Disallow: /soukromy/
+Disallow: /docasne/
+Allow: /faq/
+Allow: /jednoduche-ritualy/
+Allow: /rady/
+User-agent: Amazonbot        # Hypotetické pro Alexa
+Disallow: /soukromy/
+Disallow: /docasne/
+Allow: /faq/
+Allow: /rady/
+User-agent: Applebot         # Hypotetické pro Siri
+Disallow: /soukromy/
+Disallow: /docasne/
+Allow: /faq/
+Allow: /rady/
+
+###########################################
+# Bing (český trh mimo Google)            #
+###########################################
 User-agent: Bingbot
-Allow: /
+Disallow: /soukromy/
+Disallow: /docasne/
 
-# Bloquer les robots nuisibles ou non désirés
-User-agent: BadBot
+#################################
+# Blokování nežádoucích robotů  #
+#################################
+User-agent: AhrefsBot
 Disallow: /
-User-agent: EvilScraper
+User-agent: SemrushBot
+Disallow: /
+User-agent: MJ12bot
 Disallow: /
 
-# Empêcher l'exploration des fichiers sensibles
-Disallow: /config/
-Disallow: /backup/
+##################################################
+# Partneři a analytické nástroje Google          #
+##################################################
+User-agent: Mediapartners-Google
+Disallow: /soukromy/
+User-agent: AdsBot-Google
+Disallow: /soukromy/
+
+##################################################
+# Emergentní IA crawleři (anticipace 2025)      #
+##################################################
+User-agent: xAI-Crawler
+Disallow: /soukromy/
+User-agent: OpenAI-Crawler
+Disallow: /soukromy/
+User-agent: AnthropicBot
+Disallow: /soukromy/
+User-agent: Qwantify         # Český trh
+Disallow: /soukromy/
+
+##################################################
+# Pokročilá optimalizace (mobile-first)          #
+##################################################
+User-agent: Googlebot-Mobile
+Disallow: /soukromy/
+Disallow: /docasne/
+Allow: /ritualy/
+Allow: /ochrana/
+Allow: /odcarovani/
+
+##################
+# Sitemap a crawl #
+##################
+Sitemap: https://clairvoyancemedium.github.io/Hluboke-dalkove-odcarovani-proti-kletbam-ktere-vam-brani-v-zivotnim-pokroku.github.io/sitemap.xml
+Crawl-delay: 0.5
